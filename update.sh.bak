@@ -128,17 +128,17 @@ git checkout -q "v${NEXT_VERSION}"
 echo "Building the release..."
 ./gradlew clean build > /dev/null
 echo "Running tests..."
-# ./gradlew connectedCheck > /dev/null
+./gradlew connectedCheck > /dev/null
 echo "Uploading artifacts..."
-# ./gradlew publishReleasePublicationToSonatypeRepository > /dev/null
+./gradlew publishReleasePublicationToSonatypeRepository > /dev/null
 
 echo "Pushing changes to the repo..."
 
 git checkout -q develop
-# git push -q > /dev/null
+git push -q > /dev/null
 git checkout -q master
-# git push -q > /dev/null
-# git push -q --tags > /dev/null
+git push -q > /dev/null
+git push -q --tags > /dev/null
 
 git checkout -q develop
 
