@@ -1,6 +1,11 @@
 apply plugin: 'com.android.library'
 apply plugin: 'maven-publish'
-apply plugin: 'signing'
+
+// Disable signing on CI/JitPack to avoid sign tasks being created/executed there
+def isCiOrJitpack = System.getenv('JITPACK') != null || System.getenv('CI') == 'true' || project.hasProperty('skipSigning')
+if (!isCiOrJitpack) {
+  apply plugin: 'signing'
+}
 
 def artifactName = rootProject.name
 group rootProject.group
@@ -99,21 +104,24 @@ afterEvaluate {
     }
   }
 
-  def isCi = System.getenv('CI') == 'true' || System.getenv('JITPACK') != null || project.hasProperty('skipSigning')
+  def isCi = isCiOrJitpack
 
-  signing {
-    // Never force signing; only sign when keys are provided locally
-    required { false }
+  // Configure signing only when not on CI/JitPack and the plugin is applied locally
+  if (!isCi) {
+    signing {
+      // Never force signing; only sign when keys are provided locally
+      required { false }
 
-    // Prefer in-memory keys if provided; otherwise only sign when not CI/JitPack and key files exist
-    def key = findProperty('signing.key') ?: System.getenv('SIGNING_KEY')
-    def pass = findProperty('signing.password') ?: System.getenv('SIGNING_PASSWORD')
+      // Prefer in-memory keys if provided; otherwise only sign when key files exist locally
+      def key = findProperty('signing.key') ?: System.getenv('SIGNING_KEY')
+      def pass = findProperty('signing.password') ?: System.getenv('SIGNING_PASSWORD')
 
-    if (key && pass) {
-      useInMemoryPgpKeys(key, pass)
-      sign publishing.publications.release
-    } else if (!isCi && project.hasProperty('signing.secretKeyRingFile')) {
-      sign publishing.publications.release
+      if (key && pass) {
+        useInMemoryPgpKeys(key, pass)
+        sign publishing.publications.release
+      } else if (project.hasProperty('signing.secretKeyRingFile')) {
+        sign publishing.publications.release
+      }
     }
   }
 
