@@ -99,7 +99,26 @@ afterEvaluate {
     }
   }
 
+  def isCi = System.getenv('CI') == 'true' || System.getenv('JITPACK') != null || project.hasProperty('skipSigning')
+
   signing {
-    sign publishing.publications.release
+    // Never force signing; only sign when keys are provided locally
+    required { false }
+
+    // Prefer in-memory keys if provided; otherwise only sign when not CI/JitPack and key files exist
+    def key = findProperty('signing.key') ?: System.getenv('SIGNING_KEY')
+    def pass = findProperty('signing.password') ?: System.getenv('SIGNING_PASSWORD')
+
+    if (key && pass) {
+      useInMemoryPgpKeys(key, pass)
+      sign publishing.publications.release
+    } else if (!isCi && project.hasProperty('signing.secretKeyRingFile')) {
+      sign publishing.publications.release
+    }
+  }
+
+  // Hard-disable all sign tasks on CI/JitPack or when -PskipSigning=true
+  if (isCi) {
+    tasks.matching { it.name.startsWith('sign') }.configureEach { enabled = false }
   }
 }
